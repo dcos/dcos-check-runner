@@ -19,7 +19,6 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/dcos/dcos-check-runner/api"
 	"github.com/dcos/dcos-check-runner/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -27,7 +26,6 @@ import (
 
 var (
 	version       bool
-	diag          bool
 	cfgFile       string
 	defaultConfig = &config.Config{}
 )
@@ -45,9 +43,6 @@ var RootCmd = &cobra.Command{
 			os.Exit(0)
 		}
 
-		if diag {
-			os.Exit(runDiag())
-		}
 		cmd.Help()
 	},
 }
@@ -66,8 +61,6 @@ func init() {
 
 	RootCmd.PersistentFlags().BoolVar(&version, "version", false, "Print dcos-check-runner version")
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dcos-check-runner.yaml)")
-	RootCmd.PersistentFlags().BoolVar(&diag, "diag", false,
-		"Check DC/OS components health.")
 	RootCmd.PersistentFlags().BoolVar(&defaultConfig.FlagVerbose, "verbose", defaultConfig.FlagVerbose,
 		"Use verbose debug output.")
 	RootCmd.PersistentFlags().StringVar(&defaultConfig.FlagRole, "role", defaultConfig.FlagRole,
@@ -90,28 +83,4 @@ func initConfig() {
 			logrus.Fatalf("Error loading config file: %s", err)
 		}
 	}
-}
-
-func runDiag() int {
-	sdu := &api.SystemdUnits{}
-	units, err := sdu.GetUnits(&api.DCOSTools{})
-	if err != nil {
-		logrus.Errorf("Error getting units properties: %s", err)
-		return 1
-	}
-
-	var fail bool
-	for _, unit := range units {
-		if unit.UnitHealth != 0 {
-			fmt.Printf("[%s]: %s %s\n", unit.UnitID, unit.UnitTitle, unit.UnitOutput)
-			fail = true
-		}
-	}
-
-	if fail {
-		logrus.Error("Found unhealthy systemd units")
-		return 1
-	}
-
-	return 0
 }
