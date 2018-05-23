@@ -33,6 +33,16 @@ test: docker
 		$(IMAGE_NAME) \
 		bash -x -c './scripts/test.sh'
 
+.PHONY: shell
+shell:
+	docker run \
+		-v $(CURRENT_DIR):$(PKG_DIR)/$(BINARY_NAME) \
+		-w $(PKG_DIR)/$(BINARY_NAME) \
+		--privileged \
+		--rm \
+		-it \
+		$(IMAGE_NAME) \
+		/bin/bash
 
 # install does not run in a docker container because it only compiles on linux.
 .PHONY: install
