@@ -22,7 +22,7 @@ import (
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/dcos/dcos-diagnostics/runner"
+	"github.com/dcos/dcos-check-runner/runner"
 	"github.com/spf13/cobra"
 )
 
@@ -32,8 +32,8 @@ const (
 	checkTypeNodePostStart = "node-poststart"
 )
 
-var defaultRunnerConfig = "/opt/mesosphere/etc/dcos-diagnostics-config.json"
-var defaultRunnerConfigForWindows = "\\DCOS\\diagnostics\\config\\dcos-diagnostics-config.json"
+var defaultRunnerConfig = "/opt/mesosphere/etc/dcos-check-runner-config.json"
+var defaultRunnerConfigForWindows = "\\DCOS\\check-runner\\config\\dcos-check-runner-config.json"
 
 var (
 	list          bool

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	// Version of dcos-diagnostics code.
+	// Version of dcos-check-runner code.
 	Version = "0.4.0"
 
 	// APIVer is an API version.
@@ -17,7 +17,7 @@ var (
 type Config struct {
 	SystemdUnits []string `json:"-"`
 
-	// dcos-diagnostics flags
+	// dcos-check-runner flags
 	FlagCACertFile                 string `json:"ca-cert"`
 	FlagPull                       bool   `json:"pull"`
 	FlagVerbose                    bool   `json:"verbose"`

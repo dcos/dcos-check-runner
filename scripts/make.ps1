@@ -4,7 +4,7 @@
     Summary: Windows native build script. This poewrshell script was created to mimic the build functionalities provided 
              through "make" + Makefile on Linux for Windows build environment
 
-             Usage Examples (run from repo root: dcos-diagnostics):
+             Usage Examples (run from repo root: dcos-check-runner):
 
                 ".\scripts\make.ps1 all"
                 ".\scripts\make.ps1 build"
@@ -13,7 +13,7 @@
                 ".\scripts\make.ps1 install"
 #>
 
-$DiagnosticsServiceFileName = "dcos-diagnostics.exe"
+$CheckRunnerServiceFileName = "dcos-check-runner.exe"
 
 Function makeTest
 {
@@ -33,14 +33,14 @@ Function makeBuild
 
 Function makeClean
 {
-    if (Test-Path -Path "./$DiagnosticsServiceFileName") {
-        del ./dcos-diagnostics.exe
+    if (Test-Path -Path "./$CheckRunnerServiceFileName") {
+        del ./dcos-check-runner.exe
     }
 
     $gopath = (get-item env:"GOPATH").Value + "\bin"
-    if (Test-Path -Path "$gopath/$DiagnosticsServiceFileName") {
-        del $gopath/$DiagnosticsServiceFileName
-        Write-Output "found  $gopath/$DiagnosticsServiceFileName and deleted"
+    if (Test-Path -Path "$gopath/$CheckRunnerServiceFileName") {
+        del $gopath/$CheckRunnerServiceFileName
+        Write-Output "found  $gopath/$CheckRunnerServiceFileName and deleted"
     }
 } 
 

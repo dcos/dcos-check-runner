@@ -2,9 +2,9 @@ DEFAULT_TARGET: build
 CURRENT_DIR=$(shell pwd)
 BUILD_DIR=build
 PKG_DIR=/go/src/github.com/dcos
-BINARY_NAME=dcos-diagnostics
+BINARY_NAME=dcos-check-runner
 PKG_NAME=$(PKG_DIR)/$(BINARY_NAME)
-IMAGE_NAME=dcos-diagnostics-dev
+IMAGE_NAME=dcos-check-runner-dev
 
 all: test install
 
