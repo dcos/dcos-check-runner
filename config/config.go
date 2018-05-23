@@ -7,7 +7,7 @@ import (
 
 var (
 	// Version of dcos-check-runner code.
-	Version = "0.4.0"
+	Version = "0.1.0"
 )
 
 // Config structure is a main config object
