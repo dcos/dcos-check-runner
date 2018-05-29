@@ -69,7 +69,7 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	viper.SetConfigName("dcos-check-runner-config") // name of config file (without extension)
+	viper.SetConfigName("dcos-check-config") // name of config file (without extension)
 	viper.AddConfigPath("/opt/mesosphere/etc/")
 	viper.AutomaticEnv()
 

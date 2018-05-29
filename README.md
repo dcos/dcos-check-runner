@@ -23,7 +23,7 @@ make test
   dcos-check-runner check <check-type> [flags]
 
 Flags:
-      --check-config string   Path to dcos-check config file (default "/opt/mesosphere/etc/dcos-check-runner-config.json")
+      --check-config string   Path to dcos-check config file (default "/opt/mesosphere/etc/dcos-check-config.json")
   -h, --help                  help for check
       --list                  List runner
 

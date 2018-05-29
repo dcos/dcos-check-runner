@@ -32,8 +32,8 @@ const (
 	checkTypeNodePostStart = "node-poststart"
 )
 
-var defaultRunnerConfig = "/opt/mesosphere/etc/dcos-check-runner-config.json"
-var defaultRunnerConfigForWindows = "\\DCOS\\check-runner\\config\\dcos-check-runner-config.json"
+var defaultRunnerConfig = "/opt/mesosphere/etc/dcos-check-config.json"
+var defaultRunnerConfigForWindows = "\\DCOS\\check-runner\\config\\dcos-check-config.json"
 
 var (
 	list          bool
