@@ -21,8 +21,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/dcos/dcos-check-runner/runner"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 

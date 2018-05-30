@@ -3,11 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"path": "github.com/Sirupsen/logrus",
-			"revision": "418b41d23a1bf978c06faea5313ba194650ac088",
-			"revisionTime": "2015-09-08T20:46:18Z"
-		},
-		{
 			"checksumSHA1": "nQca8pxnWNzJAUXaWErBIrD0NVI=",
 			"path": "github.com/dcos/dcos-go/dcos",
 			"revision": "2ea27a8b570e0273245d2e6ef7b04b26b78b7cbe",
@@ -120,6 +115,12 @@
 			"path": "github.com/pkg/errors",
 			"revision": "ff09b135c25aae272398c51a07235b90a75aa4f0",
 			"revisionTime": "2017-03-16T20:15:38Z"
+		},
+		{
+			"checksumSHA1": "xJRJ67bIS0eXDSG1O4Ml2mhzuQM=",
+			"path": "github.com/sirupsen/logrus",
+			"revision": "418b41d23a1bf978c06faea5313ba194650ac088",
+			"revisionTime": "2015-09-08T20:46:18Z"
 		},
 		{
 			"checksumSHA1": "lBehULzb2/kIK3wZ0gz2yNmHq9s=",
