@@ -60,7 +60,6 @@ type responseError struct {
 	checkName     string
 	checkNotFound bool
 	response      *Response
-
 }
 
 // MarshalJSON is a custom json marshaller implementation used to return output based on user request.
@@ -204,7 +203,6 @@ func (r *Runner) PostStart(ctx context.Context, list bool, selectiveChecks ...st
 	return r.run(ctx, r.NodeChecks.Checks, list, r.NodeChecks.PostStart, selectiveChecks...)
 }
 
-
 func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool, checkList []string, selectiveChecks ...string) (*CombinedResponse, error) {
 	max := func(a, b int) int {
 		// valid values are 0,1,2,3. All other values should result in 3.
@@ -275,7 +273,6 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 				checkDuration  string
 			)
 
-
 			// list option disables the check execution
 			if !list {
 				start := time.Now()
@@ -302,7 +299,7 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 
 	for range currentCheckList {
 		select {
-		case err := <- errs:
+		case err := <-errs:
 			if err.response != nil {
 				combinedResponse.errs[err.err] = err.response
 			} else {
