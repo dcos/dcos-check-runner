@@ -55,9 +55,10 @@ type responseList struct {
 	Timeout     string   `json:"timeout"`
 }
 
-type responseError struct {
-	err           string
+type responseCheck struct {
 	checkName     string
+	err           bool
+	errMsg        string
 	checkNotFound bool
 	response      *Response
 }
@@ -255,8 +256,7 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 	// Remove duplicate items from currentCheckList.
 	currentCheckList = dedupeStrings(currentCheckList)
 
-	errs := make(chan responseError, len(currentCheckList))
-	responses := make(chan *Response, len(currentCheckList))
+	results := make(chan *responseCheck, len(currentCheckList))
 
 	// main loop to get the checks info.
 	for _, name := range currentCheckList {
@@ -264,13 +264,14 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		go func(name string) {
 			currentCheck, ok := checkMap[name]
 			if !ok {
-				errs <- responseError{"Check not found", name, true, nil}
+				results <- &responseCheck{name, true, "Check not found", true, nil}
 				return
 			}
 
 			// find runner for the given role only.
 			if !currentCheck.verifyRole(r.role) {
-				responses <- nil
+				// Check doesn't apply to our role.
+				results <- nil
 				return
 			}
 
@@ -300,31 +301,34 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 			resp.timeout = currentCheck.Timeout
 			resp.list = list
 
-			responses <- resp
+			results <- &responseCheck{name, false, "", false, resp}
 
 			// collect errors
 			if err != nil {
-				errs <- responseError{err.Error(), name, false, resp}
+				results <- &responseCheck{name, true, err.Error(), false, resp}
 			}
 		}(name)
 	}
 
 	for range currentCheckList {
 		select {
-		case err := <-errs:
-			if err.response != nil {
-				combinedResponse.errs[err.err] = err.response
-			} else {
-				combinedResponse.errs[err.err] = &Response{name: err.checkName}
-			}
-			combinedResponse.checkNotFound = err.checkNotFound
-		case resp := <-responses:
-			if resp == nil {
-				// skip filtered checks that are not appropriate for this role.
+		case result := <-results:
+			if result == nil {
+				// Check doesn't apply to our role.
 				continue
+			} else if result.err {
+				// Check failed to execute.
+				if result.response != nil {
+					combinedResponse.errs[result.errMsg] = result.response
+				} else {
+					combinedResponse.errs[result.errMsg] = &Response{name: result.checkName}
+				}
+				combinedResponse.checkNotFound = result.checkNotFound
+			} else {
+				// Check was executed.
+				combinedResponse.checks[result.response.name] = result.response
+				combinedResponse.status = max(combinedResponse.status, result.response.status)
 			}
-			combinedResponse.checks[resp.name] = resp
-			combinedResponse.status = max(combinedResponse.status, resp.status)
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
