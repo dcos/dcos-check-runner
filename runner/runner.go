@@ -301,10 +301,9 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 			resp.timeout = currentCheck.Timeout
 			resp.list = list
 
-			results <- &responseCheck{name, false, "", false, resp}
-
-			// collect errors
-			if err != nil {
+			if err == nil {
+				results <- &responseCheck{name, false, "", false, resp}
+			} else {
 				results <- &responseCheck{name, true, err.Error(), false, resp}
 			}
 		}(name)
