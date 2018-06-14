@@ -322,7 +322,9 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 				} else {
 					combinedResponse.errs[result.errMsg] = &Response{name: result.checkName}
 				}
-				combinedResponse.checkNotFound = result.checkNotFound
+				if result.checkNotFound {
+					combinedResponse.checkNotFound = true
+				}
 			} else {
 				// Check was executed.
 				combinedResponse.checks[result.response.name] = result.response
