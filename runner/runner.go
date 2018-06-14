@@ -57,8 +57,7 @@ type responseList struct {
 
 type responseCheck struct {
 	checkName     string
-	err           bool
-	errMsg        string
+	err           error
 	checkNotFound bool
 	response      *Response
 }
@@ -264,7 +263,7 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		go func(name string) {
 			currentCheck, ok := checkMap[name]
 			if !ok {
-				results <- &responseCheck{name, true, "Check not found", true, &Response{name: name}}
+				results <- &responseCheck{name, errors.New("Check not found"), true, &Response{name: name}}
 				return
 			}
 
@@ -301,11 +300,7 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 			resp.timeout = currentCheck.Timeout
 			resp.list = list
 
-			if err == nil {
-				results <- &responseCheck{name, false, "", false, resp}
-			} else {
-				results <- &responseCheck{name, true, err.Error(), false, resp}
-			}
+			results <- &responseCheck{name, err, false, resp}
 		}(name)
 	}
 
@@ -315,9 +310,9 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 			if result == nil {
 				// Check doesn't apply to our role.
 				continue
-			} else if result.err {
+			} else if result.err != nil {
 				// Check failed to execute.
-				combinedResponse.errs[result.errMsg] = result.response
+				combinedResponse.errs[result.err.Error()] = result.response
 				if result.checkNotFound {
 					combinedResponse.checkNotFound = true
 				}
