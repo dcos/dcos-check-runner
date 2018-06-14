@@ -203,6 +203,19 @@ func (r *Runner) PostStart(ctx context.Context, list bool, selectiveChecks ...st
 	return r.run(ctx, r.NodeChecks.Checks, list, r.NodeChecks.PostStart, selectiveChecks...)
 }
 
+// dedupeStrings returns a slice containing the strings in s with duplicates omitted.
+func dedupeStrings(s []string) []string {
+	deduped := []string{}
+	m := make(map[string]bool)
+	for _, i := range s {
+		if _, ok := m[i]; !ok {
+			m[i] = true
+			deduped = append(deduped, i)
+		}
+	}
+	return deduped
+}
+
 func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool, checkList []string, selectiveChecks ...string) (*CombinedResponse, error) {
 	max := func(a, b int) int {
 		// valid values are 0,1,2,3. All other values should result in 3.
@@ -222,9 +235,10 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		return combinedResponse, nil
 	}
 
+	// cuurentCheckList is the list of checks that will be executed or listed.
 	currentCheckList := checkList
 
-	// if a caller passed selectiveChecks, we should make sure those checks are in checkList
+	// if a caller passed selectiveChecks, we should make sure those checks are in currentCheckList
 	// and use only those.
 	if len(selectiveChecks) > 0 {
 		currentCheckList = []string{}
@@ -237,6 +251,9 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 			}
 		}
 	}
+
+	// Remove duplicate items from currentCheckList.
+	currentCheckList = dedupeStrings(currentCheckList)
 
 	errs := make(chan responseError, len(currentCheckList))
 	responses := make(chan *Response, len(currentCheckList))
@@ -254,11 +271,6 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 			// find runner for the given role only.
 			if !currentCheck.verifyRole(r.role) {
 				responses <- nil
-				return
-			}
-
-			if _, ok := combinedResponse.checks[name]; ok {
-				errs <- responseError{"Duplicate check", name, false, nil}
 				return
 			}
 
