@@ -264,7 +264,7 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		go func(name string) {
 			currentCheck, ok := checkMap[name]
 			if !ok {
-				results <- &responseCheck{name, true, "Check not found", true, nil}
+				results <- &responseCheck{name, true, "Check not found", true, &Response{name: name}}
 				return
 			}
 
@@ -317,11 +317,7 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 				continue
 			} else if result.err {
 				// Check failed to execute.
-				if result.response != nil {
-					combinedResponse.errs[result.errMsg] = result.response
-				} else {
-					combinedResponse.errs[result.errMsg] = &Response{name: result.checkName}
-				}
+				combinedResponse.errs[result.errMsg] = result.response
 				if result.checkNotFound {
 					combinedResponse.checkNotFound = true
 				}
