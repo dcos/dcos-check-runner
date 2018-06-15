@@ -55,6 +55,13 @@ type responseList struct {
 	Timeout     string   `json:"timeout"`
 }
 
+type responseCheck struct {
+	checkName     string
+	err           error
+	checkNotFound bool
+	response      *Response
+}
+
 // MarshalJSON is a custom json marshaller implementation used to return output based on user request.
 // responseList is returned if a user requested to list the checks. response is used to return back the result
 // with populated Output and executable return code.
@@ -196,6 +203,19 @@ func (r *Runner) PostStart(ctx context.Context, list bool, selectiveChecks ...st
 	return r.run(ctx, r.NodeChecks.Checks, list, r.NodeChecks.PostStart, selectiveChecks...)
 }
 
+// dedupeStrings returns a slice containing the strings in s with duplicates omitted.
+func dedupeStrings(s []string) []string {
+	deduped := []string{}
+	m := make(map[string]bool)
+	for _, i := range s {
+		if _, ok := m[i]; !ok {
+			m[i] = true
+			deduped = append(deduped, i)
+		}
+	}
+	return deduped
+}
+
 func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool, checkList []string, selectiveChecks ...string) (*CombinedResponse, error) {
 	max := func(a, b int) int {
 		// valid values are 0,1,2,3. All other values should result in 3.
@@ -215,9 +235,10 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		return combinedResponse, nil
 	}
 
+	// cuurentCheckList is the list of checks that will be executed or listed.
 	currentCheckList := checkList
 
-	// if a caller passed selectiveChecks, we should make sure those checks are in checkList
+	// if a caller passed selectiveChecks, we should make sure those checks are in currentCheckList
 	// and use only those.
 	if len(selectiveChecks) > 0 {
 		currentCheckList = []string{}
@@ -231,59 +252,78 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		}
 	}
 
+	// Remove duplicate items from currentCheckList.
+	currentCheckList = dedupeStrings(currentCheckList)
+
+	results := make(chan *responseCheck, len(currentCheckList))
+
 	// main loop to get the checks info.
 	for _, name := range currentCheckList {
-		resp := &Response{
-			name: name,
+
+		go func(name string) {
+			currentCheck, ok := checkMap[name]
+			if !ok {
+				results <- &responseCheck{name, errors.New("Check not found"), true, &Response{name: name}}
+				return
+			}
+
+			// find runner for the given role only.
+			if !currentCheck.verifyRole(r.role) {
+				// Check doesn't apply to our role.
+				results <- nil
+				return
+			}
+
+			resp := &Response{
+				name: name,
+			}
+
+			var (
+				combinedOutput []byte
+				code           int
+				err            error
+				checkDuration  string
+			)
+
+			// list option disables the check execution
+			if !list {
+				start := time.Now()
+				combinedOutput, code, err = currentCheck.Run(ctx, r.role)
+				checkDuration = time.Since(start).String()
+			}
+
+			resp.output = string(combinedOutput)
+			resp.status = code
+			resp.duration = checkDuration
+			resp.description = currentCheck.Description
+			resp.cmd = currentCheck.Cmd
+			resp.timeout = currentCheck.Timeout
+			resp.list = list
+
+			results <- &responseCheck{name, err, false, resp}
+		}(name)
+	}
+
+	for range currentCheckList {
+		select {
+		case result := <-results:
+			if result == nil {
+				// Check doesn't apply to our role.
+				continue
+			} else if result.err != nil {
+				// Check failed to execute.
+				combinedResponse.errs[result.err.Error()] = result.response
+				if result.checkNotFound {
+					combinedResponse.checkNotFound = true
+				}
+			} else {
+				// Check was executed.
+				combinedResponse.checks[result.response.name] = result.response
+				combinedResponse.status = max(combinedResponse.status, result.response.status)
+			}
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		}
-
-		currentCheck, ok := checkMap[name]
-		if !ok {
-			combinedResponse.errs["check not found"] = resp
-			combinedResponse.checkNotFound = true
-			continue
-		}
-
-		// find runner for the given role only.
-		if !currentCheck.verifyRole(r.role) {
-			continue
-		}
-
-		var (
-			combinedOutput []byte
-			code           int
-			err            error
-			checkDuration  string
-		)
-
-		if _, ok := combinedResponse.checks[name]; ok {
-			combinedResponse.errs["duplicate check"] = resp
-			continue
-		}
-
-		// list option disables the check execution
-		if !list {
-
-			start := time.Now()
-			combinedOutput, code, err = currentCheck.Run(ctx, r.role)
-			checkDuration = time.Since(start).String()
-		}
-
-		resp.output = string(combinedOutput)
-		resp.status = code
-		resp.duration = checkDuration
-		resp.description = currentCheck.Description
-		resp.cmd = currentCheck.Cmd
-		resp.timeout = currentCheck.Timeout
-		resp.list = list
-		combinedResponse.checks[name] = resp
-
-		// collect errors
-		if err != nil {
-			combinedResponse.errs[err.Error()] = resp
-		}
-
-		combinedResponse.status = max(combinedResponse.status, code)
 	}
 
 	return combinedResponse, nil
