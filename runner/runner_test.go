@@ -2,9 +2,11 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"encoding/json"
 
@@ -277,5 +279,105 @@ func TestTimeout(t *testing.T) {
 	}
 	if check2.Output != expectedErrMsg {
 		t.Fatalf("expect output %s. Got %s", expectedErrMsg, check2.Output)
+	}
+}
+
+// runWithTeimout calls f() and returns an error if it takes longer than d to return.
+func runWithTimeout(d time.Duration, f func()) error {
+	finished := make(chan bool, 1)
+	go func() {
+		f()
+		finished <- true
+	}()
+	select {
+	case <-finished:
+		return nil
+	case <-time.After(d):
+		return errors.New(fmt.Sprintf("timed out after %s", d.String()))
+	}
+}
+
+// TestRunnerParallelism verifies that the check runner runs checks in parallel, using timeouts.
+func TestRunnerParallelism(t *testing.T) {
+	r := NewRunner("master")
+	cfg := `
+{
+  "cluster_checks": {
+    "check1": {
+      "cmd": ["sleep", "1"],
+      "timeout": "5s"
+    },
+    "check2": {
+      "cmd": ["sleep", "1"],
+      "timeout": "5s"
+    },
+    "check3": {
+      "cmd": ["sleep", "1"],
+      "timeout": "5s"
+    },
+    "check4": {
+      "cmd": ["sleep", "1"],
+      "timeout": "5s"
+    },
+    "check5": {
+      "cmd": ["sleep", "1"],
+      "timeout": "5s"
+    }
+  },
+  "node_checks": {
+    "checks": {
+      "check1": {
+        "cmd": ["sleep", "1"],
+        "timeout": "5s"
+      },
+      "check2": {
+        "cmd": ["sleep", "1"],
+        "timeout": "5s"
+      },
+      "check3": {
+        "cmd": ["sleep", "1"],
+        "timeout": "5s"
+      },
+      "check4": {
+        "cmd": ["sleep", "1"],
+        "timeout": "5s"
+      },
+      "check5": {
+        "cmd": ["sleep", "1"],
+        "timeout": "5s"
+      }
+    },
+    "prestart": ["check1", "check2", "check3", "check4", "check5"],
+    "poststart": ["check1", "check2", "check3", "check4", "check5"]
+  }
+}`
+	err := r.Load(strings.NewReader(cfg))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Each check should take 1 second, so we expect that parallalel check runs also take 1 second, with a 100 millisecond
+	// buffer.
+	maxDuration := (1 * time.Second) + (100 * time.Millisecond)
+
+	err = runWithTimeout(maxDuration, func() {
+		r.Cluster(context.TODO(), false)
+	})
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "cluster check parallelism test failed"))
+	}
+
+	err = runWithTimeout(maxDuration, func() {
+		r.PreStart(context.TODO(), false)
+	})
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "node-prestart check parallelism test failed"))
+	}
+
+	err = runWithTimeout(maxDuration, func() {
+		r.PostStart(context.TODO(), false)
+	})
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "node-poststart check parallelism test failed"))
 	}
 }
