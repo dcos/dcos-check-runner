@@ -282,7 +282,7 @@ func TestTimeout(t *testing.T) {
 	}
 }
 
-// runWithTeimout calls f() and returns an error if it takes longer than d to return.
+// runWithTimeout calls f() and returns an error if it takes longer than d to return.
 func runWithTimeout(d time.Duration, f func()) error {
 	finished := make(chan bool, 1)
 	go func() {
