@@ -54,7 +54,16 @@ var checkCmd = &cobra.Command{
 			selectiveChecks = args[1:]
 		}
 
-		r := runner.NewRunner(defaultConfig.FlagRole)
+		var (
+			err error
+			r   *runner.Runner
+		)
+
+		r, err = runner.NewRunner(defaultConfig.FlagRole)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
 		if err := r.LoadFromFile(checksCfgFile); err != nil {
 			logrus.Fatal(err)
 		}
@@ -64,13 +73,10 @@ var checkCmd = &cobra.Command{
 			os.Setenv(k, v)
 		}
 
-		var (
-			rs  *runner.CombinedResponse
-			err error
-		)
-
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
+
+		var rs *runner.CombinedResponse
 
 		switch args[0] {
 		case checkTypeCluster:

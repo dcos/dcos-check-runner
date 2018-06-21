@@ -17,18 +17,14 @@ const (
 	statusUnknown = 3
 )
 
-// NewRunner returns an initialized instance of *Runner.
-func NewRunner(role string) *Runner {
-	// according to design doc, runner config must treat roles `agent` and `agent_public`
-	// as a single `agent` role. If a user create a config and sets role `agent`, we expect to run this
-	// check on both agent and agent_public nodes.
-	// https://jira.mesosphere.com/browse/DCOS_OSS-1242
-	if role == dcos.RoleAgentPublic {
-		role = dcos.RoleAgent
+// NewRunner returns an initialized instance of *Runner. It returns an error if the role is not master or agent.
+func NewRunner(role string) (*Runner, error) {
+	switch role {
+	case dcos.RoleMaster, dcos.RoleAgent:
+	default:
+		return nil, errors.New(fmt.Sprintf("Runner role must be one of \"%s\" or \"%s\". Got \"%s\"", dcos.RoleMaster, dcos.RoleAgent, role))
 	}
-	return &Runner{
-		role: role,
-	}
+	return &Runner{role: role}, nil
 }
 
 // Response provides a command Response.
