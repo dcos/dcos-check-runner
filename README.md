@@ -28,7 +28,7 @@ Flags:
       --list                  List runner
 
 Global Flags:
-      --config string   config file (default is $HOME/.dcos-check-runner.yaml)
+      --config string   config file (default is /opt/mesosphere/etc/dcos-check-runner.yaml)
       --role string     Set node role
       --verbose         Use verbose debug output.
       --version         Print dcos-check-runner version

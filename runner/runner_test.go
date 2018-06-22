@@ -26,24 +26,39 @@ func TestConfigLoadConfig(t *testing.T) {
 }
 
 func TestNewRunner(t *testing.T) {
-	r := NewRunner("master")
-	if r.role != "master" {
-		t.Fatalf("expecting role master. Got %s", r.role)
+	// Assert that the only allowed roles are master and agent.
+	var (
+		r   *Runner
+		err error
+	)
+
+	// NewRunner() should succeed with these roles.
+	for _, role := range []string{"master", "agent"} {
+		r, err = NewRunner(role)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if r.role != role {
+			t.Fatalf("Expected runner role %s. Got %s", role, r.role)
+		}
 	}
 
-	r = NewRunner("agent")
-	if r.role != "agent" {
-		t.Fatalf("expecting role agent. Got %s", r.role)
-	}
-
-	r = NewRunner("agent_public")
-	if r.role != "agent" {
-		t.Fatalf("expecting role agent. Got %s", r.role)
+	// NewRunner() should return an error with these roles.
+	for _, role := range []string{"", "foo", "agent_public"} {
+		r, err = NewRunner(role)
+		if err == nil {
+			t.Fatalf("NewRunner(\"%s\") should return an error but does not", role)
+		}
 	}
 }
 
 func TestRun(t *testing.T) {
-	r := NewRunner("master")
+	r, err := NewRunner("master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := `
 {
   "cluster_checks": {
@@ -76,7 +91,7 @@ func TestRun(t *testing.T) {
 		expectedOutput = "STDOUT\nSTDERR\n"
 	}
 
-	err := r.Load(strings.NewReader(cfg))
+	err = r.Load(strings.NewReader(cfg))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +141,11 @@ func validateCheck(cr *CombinedResponse, name, output string) error {
 }
 
 func TestList(t *testing.T) {
-	r := NewRunner("master")
+	r, err := NewRunner("master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := `
 {
   "cluster_checks": {
@@ -217,7 +236,11 @@ func validateCheckListing(cr *CombinedResponse, name, description, timeout strin
 }
 
 func TestTimeout(t *testing.T) {
-	r := NewRunner("master")
+	r, err := NewRunner("master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := `
 {
   "node_checks": {
@@ -238,7 +261,7 @@ func TestTimeout(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("TestTimeout was skipped on Windows")
 	}
-	err := r.Load(strings.NewReader(cfg))
+	err = r.Load(strings.NewReader(cfg))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +305,7 @@ func TestTimeout(t *testing.T) {
 	}
 }
 
-// runWithTeimout calls f() and returns an error if it takes longer than d to return.
+// runWithTimeout calls f() and returns an error if it takes longer than d to return.
 func runWithTimeout(d time.Duration, f func()) error {
 	finished := make(chan bool, 1)
 	go func() {
@@ -299,7 +322,11 @@ func runWithTimeout(d time.Duration, f func()) error {
 
 // TestRunnerParallelism verifies that the check runner runs checks in parallel, using timeouts.
 func TestRunnerParallelism(t *testing.T) {
-	r := NewRunner("master")
+	r, err := NewRunner("master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cfg := `
 {
   "cluster_checks": {
@@ -351,7 +378,7 @@ func TestRunnerParallelism(t *testing.T) {
     "poststart": ["check1", "check2", "check3", "check4", "check5"]
   }
 }`
-	err := r.Load(strings.NewReader(cfg))
+	err = r.Load(strings.NewReader(cfg))
 	if err != nil {
 		t.Fatal(err)
 	}

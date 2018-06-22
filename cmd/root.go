@@ -60,7 +60,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().BoolVar(&version, "version", false, "Print dcos-check-runner version")
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dcos-check-runner.yaml)")
+	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /opt/mesosphere/etc/dcos-check-runner.yaml)")
 	RootCmd.PersistentFlags().BoolVar(&defaultConfig.FlagVerbose, "verbose", defaultConfig.FlagVerbose,
 		"Use verbose debug output.")
 	RootCmd.PersistentFlags().StringVar(&defaultConfig.FlagRole, "role", defaultConfig.FlagRole,
@@ -69,7 +69,7 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	viper.SetConfigName("dcos-check-config") // name of config file (without extension)
+	viper.SetConfigName("dcos-check-runner") // name of config file (without extension)
 	viper.AddConfigPath("/opt/mesosphere/etc/")
 	viper.AutomaticEnv()
 
