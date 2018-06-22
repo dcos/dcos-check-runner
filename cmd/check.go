@@ -54,12 +54,7 @@ var checkCmd = &cobra.Command{
 			selectiveChecks = args[1:]
 		}
 
-		var (
-			err error
-			r   *runner.Runner
-		)
-
-		r, err = runner.NewRunner(defaultConfig.FlagRole)
+		r, err := runner.NewRunner(defaultConfig.FlagRole)
 		if err != nil {
 			logrus.Fatal(err)
 		}
