@@ -53,89 +53,185 @@ func TestNewRunner(t *testing.T) {
 	}
 }
 
+// keys returns an array of m's keys.
+func keys(m map[string]interface{}) []string {
+	s := make([]string, len(m))
+	i := 0
+	for k := range m {
+		s[i] = k
+		i++
+	}
+	return s
+}
+
 func TestRun(t *testing.T) {
-	r, err := NewRunner("master")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cfg := `
-{
-  "cluster_checks": {
-    "test_check": {
-      "cmd": ["CombinedScriptName"],
-      "timeout": "1s"
-    }
-  },
-  "node_checks": {
-    "checks": {
-      "check1": {
-        "cmd": ["CombinedScriptName"],
-        "timeout": "1s"
-      },
-      "check2": {
-        "cmd": ["CombinedScriptName"],
-        "timeout": "1s"
-      }
-    },
-    "prestart": ["check1"],
-    "poststart": ["check2"]
-  }
-}`
-	var expectedOutput string
+	checkScript := CombinedShScript
+	expectedCheckOutput := "STDOUT\nSTDERR\n"
 	if runtime.GOOS == "windows" {
-		cfg = strings.Replace(cfg, "CombinedScriptName", CombinedPowershellScript, -1)
-		expectedOutput = "STDOUT\r\nSTDERR\r\n"
-	} else {
-		cfg = strings.Replace(cfg, "CombinedScriptName", CombinedShScript, -1)
-		expectedOutput = "STDOUT\nSTDERR\n"
+		checkScript = CombinedPowershellScript
+		expectedCheckOutput = "STDOUT\r\nSTDERR\r\n"
 	}
 
-	err = r.Load(strings.NewReader(cfg))
+	// Build the check config for this test.
+	checkCfg := map[string]map[string]interface{}{
+		"cluster_checks": map[string]interface{}{
+			"check1": map[string]interface{}{
+				"cmd":     []string{checkScript},
+				"timeout": "1s",
+			},
+			"check2": map[string]interface{}{
+				"cmd":     []string{checkScript},
+				"timeout": "1s",
+			},
+			"check3": map[string]interface{}{
+				"cmd":     []string{checkScript},
+				"timeout": "1s",
+			},
+			"check4": map[string]interface{}{
+				"cmd":     []string{checkScript},
+				"timeout": "1s",
+			},
+		},
+		"node_checks": map[string]interface{}{
+			"checks": map[string]interface{}{
+				"check5": map[string]interface{}{
+					"cmd":     []string{checkScript},
+					"timeout": "1s",
+				},
+				"check6": map[string]interface{}{
+					"cmd":     []string{checkScript},
+					"timeout": "1s",
+					"roles":   []string{"master", "agent"},
+				},
+				"check7": map[string]interface{}{
+					"cmd":     []string{checkScript},
+					"timeout": "1s",
+					"roles":   []string{"master"},
+				},
+				"check8": map[string]interface{}{
+					"cmd":     []string{checkScript},
+					"timeout": "1s",
+					"roles":   []string{"agent"},
+				},
+			},
+			"prestart":  []string{"check5", "check6", "check7", "check8"},
+			"poststart": []string{"check5", "check6", "check7", "check8"},
+		},
+	}
+	checkCfgJSON, err := json.Marshal(checkCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := r.Cluster(context.TODO(), false)
-	if err != nil {
-		t.Fatal(err)
+	// From the config, build lists of check names we expect by type and role.
+	// Cluster checks aren't filtered by role, so we expect all cluster checks on all roles.
+	expectedClusterChecks := keys(checkCfg["cluster_checks"])
+	// Node checks may be filtered by role.
+	// To simplify the test, we assume that all node checks are both prestart and poststart.
+	expectedNodeChecks := map[string][]string{
+		"master": []string{},
+		"agent":  []string{},
+	}
+	nodeChecksVal, ok := checkCfg["node_checks"]["checks"]
+	if !ok {
+		t.Fatalf("Node checks not present in config")
+	}
+	nodeChecks := nodeChecksVal.(map[string]interface{})
+	for checkName, checkDefVal := range nodeChecks {
+		checkDef := checkDefVal.(map[string]interface{})
+		rolesVal, ok := checkDef["roles"]
+		if !ok {
+			// No role specified, so we expect it on all roles.
+			for role, checkNames := range expectedNodeChecks {
+				expectedNodeChecks[role] = append(checkNames, checkName)
+			}
+		} else {
+			roles := rolesVal.([]string)
+			for _, role := range roles {
+				checkNames, ok := expectedNodeChecks[role]
+				if !ok {
+					t.Fatalf("Unexpected role %s for node check %s", role, checkName)
+				}
+				expectedNodeChecks[role] = append(checkNames, checkName)
+			}
+		}
 	}
 
-	if err := validateCheck(out, "test_check", expectedOutput); err != nil {
-		t.Fatal(err)
-	}
+	// For each role, instantiate a check runner, run all types of checks, and then verify the results.
+	for _, role := range []string{"master", "agent"} {
+		r, err := NewRunner(role)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = r.Load(strings.NewReader(string(checkCfgJSON[:])))
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	prestart, err := r.PreStart(context.TODO(), false)
-	if err != nil {
-		t.Fatal(err)
-	}
+		// Cluster checks
+		clusterCheckResponse, err := r.Cluster(context.TODO(), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if clusterCheckResponse.Status() != 0 {
+			t.Fatalf("Expected status 0 for %s cluster checks, got %d", role, clusterCheckResponse.Status())
+		}
+		if len(clusterCheckResponse.checks) != len(expectedClusterChecks) {
+			t.Fatalf("Expected %d checks in %s cluster checks response, got %d", len(expectedClusterChecks), role, len(clusterCheckResponse.checks))
+		}
+		for _, checkName := range expectedClusterChecks {
+			if err := validateCheck(checkName, 0, expectedCheckOutput, clusterCheckResponse.checks); err != nil {
+				t.Fatal(err)
+			}
+		}
 
-	if err := validateCheck(prestart, "check1", expectedOutput); err != nil {
-		t.Fatal(err)
-	}
+		// Prestart node checks
+		prestartNodeCheckResponse, err := r.PreStart(context.TODO(), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if prestartNodeCheckResponse.Status() != 0 {
+			t.Fatalf("Expected status 0 for %s node-prestart checks, got %d", role, prestartNodeCheckResponse.Status())
+		}
+		if len(prestartNodeCheckResponse.checks) != len(expectedNodeChecks[role]) {
+			t.Fatalf("Expected %d checks in %s node-prestart checks response, got %d", len(expectedNodeChecks[role]), role, len(prestartNodeCheckResponse.checks))
+		}
+		for _, checkName := range expectedNodeChecks[role] {
+			if err := validateCheck(checkName, 0, expectedCheckOutput, prestartNodeCheckResponse.checks); err != nil {
+				t.Fatal(err)
+			}
+		}
 
-	poststart, err := r.PostStart(context.TODO(), false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := validateCheck(poststart, "check2", expectedOutput); err != nil {
-		t.Fatal(err)
+		// Poststart node checks
+		poststartNodeCheckResponse, err := r.PostStart(context.TODO(), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if poststartNodeCheckResponse.Status() != 0 {
+			t.Fatalf("Expected status 0 for %s node-poststart checks, got %d", role, poststartNodeCheckResponse.Status())
+		}
+		if len(poststartNodeCheckResponse.checks) != len(expectedNodeChecks[role]) {
+			t.Fatalf("Expected %d checks in %s node-poststart checks response, got %d", len(expectedNodeChecks[role]), role, len(poststartNodeCheckResponse.checks))
+		}
+		for _, checkName := range expectedNodeChecks[role] {
+			if err := validateCheck(checkName, 0, expectedCheckOutput, poststartNodeCheckResponse.checks); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 }
 
-func validateCheck(cr *CombinedResponse, name, output string) error {
-	if cr.Status() != 0 {
-		return errors.Errorf("expect exit code 0. Got %d", cr.Status())
-	}
-
-	check, ok := cr.checks[name]
+// validateCheck takes the name of a check, its expected status and output, as well as a map of check results, and verifies the check is included in the results with the expected status and output.
+func validateCheck(checkName string, expectedStatus int, expectedOutput string, checkResults map[string]*Response) error {
+	checkResult, ok := checkResults[checkName]
 	if !ok {
-		return errors.Errorf("expect check %s", name)
+		return errors.Errorf("Response is missing check %s", checkName)
 	}
-
-	if check.output != output {
-		return errors.Errorf("expect %s. Got %s", output, check.output)
+	if checkResult.status != 0 {
+		return errors.Errorf("Expected status 0 for check %s, got %d", checkName, checkResult.status)
+	}
+	if checkResult.output != expectedOutput {
+		return errors.Errorf("Expected output \"%s\" for check %s, got \"%s\"", expectedOutput, checkName, checkResult.output)
 	}
 	return nil
 }
