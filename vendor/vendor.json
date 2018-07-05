@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "zg16zjZTQ9R89+UOLmEZxHgxDtM=",
+			"path": "github.com/coreos/go-systemd/activation",
+			"revision": "a4887aeaa186e68961d2d6af7d5fbac6bd6fa79b",
+			"revisionTime": "2018-05-25T14:22:39Z"
+		},
+		{
 			"checksumSHA1": "nQca8pxnWNzJAUXaWErBIrD0NVI=",
 			"path": "github.com/dcos/dcos-go/dcos",
 			"revision": "2ea27a8b570e0273245d2e6ef7b04b26b78b7cbe",

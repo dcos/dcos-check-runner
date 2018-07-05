@@ -14,6 +14,12 @@ var (
 type Config struct {
 	FlagVerbose bool   `json:"verbose"`
 	FlagRole    string `json:"role"`
+
+	// http-server
+	FlagHost          string `json:"host"`
+	FlagPort          int    `json:"port"`
+	FlagBaseURI       string `json:"base-uri"`
+	FlagSystemdSocket bool   `json:"systemd-socket"`
 }
 
 // LoadFromViper takes a map of flags with values and updates the config structure.
