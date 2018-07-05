@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/dcos/dcos-check-runner/runner"
 	"github.com/sirupsen/logrus"
@@ -32,13 +31,7 @@ const (
 	checkTypeNodePostStart = "node-poststart"
 )
 
-var defaultRunnerConfig = "/opt/mesosphere/etc/dcos-check-config.json"
-var defaultRunnerConfigForWindows = "\\DCOS\\check-runner\\config\\dcos-check-config.json"
-
-var (
-	list          bool
-	checksCfgFile string
-)
+var list bool
 
 // checkCmd represents the check command
 var checkCmd = &cobra.Command{
@@ -59,7 +52,7 @@ var checkCmd = &cobra.Command{
 			logrus.Fatal(err)
 		}
 
-		if err := r.LoadFromFile(checksCfgFile); err != nil {
+		if err := r.LoadFromFile(checkCfgFile); err != nil {
 			logrus.Fatal(err)
 		}
 
@@ -100,13 +93,7 @@ var checkCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(checkCmd)
 
-	if runtime.GOOS == "windows" {
-		defaultRunnerConfig = os.Getenv("SYSTEMDRIVE") + defaultRunnerConfigForWindows
-	}
-
 	checkCmd.PersistentFlags().BoolVar(&list, "list", false, "List runner")
-	checkCmd.PersistentFlags().StringVar(&checksCfgFile, "check-config", defaultRunnerConfig,
-		"Path to dcos-check config file")
 }
 
 func emitOutput(rc *runner.CombinedResponse) int {

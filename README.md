@@ -23,13 +23,13 @@ make test
   dcos-check-runner check <check-type> [flags]
 
 Flags:
-      --check-config string   Path to dcos-check config file (default "/opt/mesosphere/etc/dcos-check-config.json")
-  -h, --help                  help for check
-      --list                  List runner
+  -h, --help   help for check
+      --list   List runner
 
 Global Flags:
-      --config string   config file (default is /opt/mesosphere/etc/dcos-check-runner.yaml)
-      --role string     Set node role
-      --verbose         Use verbose debug output.
-      --version         Print dcos-check-runner version
+      --check-config string   Path to check configuration file (default "/opt/mesosphere/etc/dcos-check-config.json")
+      --config string         config file (default is /opt/mesosphere/etc/dcos-check-runner.yaml)
+      --role string           Set node role
+      --verbose               Use verbose debug output.
+      --version               Print dcos-check-runner version
 ```

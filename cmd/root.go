@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/dcos/dcos-check-runner/config"
 	"github.com/sirupsen/logrus"
@@ -24,8 +25,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+var defaultCheckConfig = "/opt/mesosphere/etc/dcos-check-config.json"
+var defaultCheckConfigWindows = "\\DCOS\\check-runner\\config\\dcos-check-config.json"
+
 var (
 	version       bool
+	checkCfgFile  string
 	cfgFile       string
 	defaultConfig = &config.Config{}
 )
@@ -59,6 +64,12 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	if runtime.GOOS == "windows" {
+		defaultCheckConfig = os.Getenv("SYSTEMDRIVE") + defaultCheckConfigWindows
+	}
+
+	RootCmd.PersistentFlags().StringVar(&checkCfgFile, "check-config", defaultCheckConfig,
+		"Path to check configuration file")
 	RootCmd.PersistentFlags().BoolVar(&version, "version", false, "Print dcos-check-runner version")
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /opt/mesosphere/etc/dcos-check-runner.yaml)")
 	RootCmd.PersistentFlags().BoolVar(&defaultConfig.FlagVerbose, "verbose", defaultConfig.FlagVerbose,
