@@ -9,6 +9,7 @@ import (
 
 	"github.com/dcos/dcos-check-runner/runner"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 // NewRouter returns an API router for runner.
@@ -17,10 +18,22 @@ func NewRouter(runner *runner.Runner, baseURI string) *mux.Router {
 	rh := runnerHandler{runner: runner}
 
 	base := router.PathPrefix(baseURI).Subrouter()
-	base.HandleFunc("/{check_type}/", rh.listChecks).Methods("GET")
-	base.HandleFunc("/{check_type}/", rh.runChecks).Methods("POST")
+	base.Handle("/{check_type}/", withMiddlewares(http.HandlerFunc(rh.listChecks))).Methods("GET")
+	base.Handle("/{check_type}/", withMiddlewares(http.HandlerFunc(rh.runChecks))).Methods("POST")
 
 	return router
+}
+
+var middlewares = [...]func(http.Handler) http.Handler{
+	logRequestResponseMiddleware,
+	loggerMiddleware,
+}
+
+func withMiddlewares(h http.Handler) http.Handler {
+	for _, m := range middlewares {
+		h = m(h)
+	}
+	return h
 }
 
 type runnerHandler struct {
@@ -36,10 +49,12 @@ func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
 
 	rs, err := checkFunc(r.Context(), true, checksFromQueryParams(r)...)
 	if err != nil {
-		http.Error(w, "Error listing checks", http.StatusInternalServerError)
+		errMsg := "Error listing checks"
+		reqLogger(r).Error(errors.Wrap(err, errMsg))
+		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
-	writeJSONResponse(w, rs)
+	writeJSONResponse(w, r, rs)
 }
 
 func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
@@ -57,10 +72,12 @@ func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
 
 	rs, err := checkFunc(r.Context(), false, checks...)
 	if err != nil {
-		http.Error(w, "Error running checks", http.StatusInternalServerError)
+		errMsg := "Error running checks"
+		reqLogger(r).Error(errors.Wrap(err, errMsg))
+		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
-	writeJSONResponse(w, rs)
+	writeJSONResponse(w, r, rs)
 }
 
 // checkFuncFromReq returns the check function appropriate for r.
@@ -70,6 +87,7 @@ func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
 func (rh *runnerHandler) checkFuncFromReq(r *http.Request) (func(context.Context, bool, ...string) (*runner.CombinedResponse, error), *httpError) {
 	checkType, ok := mux.Vars(r)["check_type"]
 	if !ok {
+		reqLogger(r).Error("check_type not provided in URI")
 		return nil, &httpError{http.StatusInternalServerError, ""}
 	}
 
@@ -165,9 +183,10 @@ func checksFromQueryParams(r *http.Request) []string {
 }
 
 // writeJSONResponse writes the JSON encoding of bodyObj to w.
-func writeJSONResponse(w http.ResponseWriter, bodyObj interface{}) {
+func writeJSONResponse(w http.ResponseWriter, r *http.Request, bodyObj interface{}) {
 	body, err := json.Marshal(bodyObj)
 	if err != nil {
+		reqLogger(r).Error(errors.Wrap(err, "failed to serialize JSON response"))
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}

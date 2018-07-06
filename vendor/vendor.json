@@ -21,6 +21,12 @@
 			"revisionTime": "2018-05-28T12:45:22Z"
 		},
 		{
+			"checksumSHA1": "Fanvk5Tua0lSCtgEB+Ji0lZD1B8=",
+			"path": "github.com/felixge/httpsnoop",
+			"revision": "eadd4fad6aac69ae62379194fe0219f3dbc80fd3",
+			"revisionTime": "2017-06-29T01:04:42Z"
+		},
+		{
 			"checksumSHA1": "7NP1qUMF8Kx1y0zANxx0e+oq9Oo=",
 			"path": "github.com/fsnotify/fsnotify",
 			"revision": "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9",
