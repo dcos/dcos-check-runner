@@ -17,7 +17,6 @@ import (
 var httpServerCmd = &cobra.Command{
 	Use:   "http-server",
 	Short: "Start the check runner HTTP server",
-	Long:  `TODO`,
 	Run: func(cmd *cobra.Command, args []string) {
 		r, err := runner.NewRunner(defaultConfig.FlagRole)
 		if err != nil {
