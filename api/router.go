@@ -129,9 +129,9 @@ func checksFromBody(r *http.Request) ([]string, *httpError) {
 			return nil, &httpError{http.StatusBadRequest, err.Error()}
 		}
 		return checks, nil
-	default:
-		return nil, &httpError{http.StatusUnsupportedMediaType, fmt.Sprintf("unsupported Content-Type: %s", ct)}
 	}
+
+	return nil, &httpError{http.StatusUnsupportedMediaType, fmt.Sprintf("unsupported Content-Type: %s", ct)}
 }
 
 // checksFromJSONBody returns a slice of the check names from r's JSON-encoded body.
