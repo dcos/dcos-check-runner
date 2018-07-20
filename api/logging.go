@@ -29,7 +29,7 @@ func loggerMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// logRequestsMiddleware returns a http.Handler that writes a log entry for each request and response.
+// logRequestResponseMiddleware returns a http.Handler that writes a log entry for each request and response.
 func logRequestResponseMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqLogger(r).Info("Received request")
