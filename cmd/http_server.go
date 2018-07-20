@@ -33,18 +33,21 @@ var httpServerCmd = &cobra.Command{
 		}
 
 		router := api.NewRouter(r, defaultConfig.FlagBaseURI)
+		var serveErr error
 		if defaultConfig.FlagSystemdSocket {
 			listener, err := getSystemdSocket()
 			if err != nil {
 				logrus.Fatal(err)
 			}
 			logrus.Infof("Listening at %s", listener.Addr().String())
-			logrus.Fatal(http.Serve(listener, router))
+			serveErr = http.Serve(listener, router)
 		} else {
 			addr := fmt.Sprintf("%s:%d", defaultConfig.FlagHost, defaultConfig.FlagPort)
 			logrus.Infof("Listening at %s", addr)
-			logrus.Fatal(http.ListenAndServe(addr, router))
+			serveErr = http.ListenAndServe(addr, router)
 		}
+
+		logrus.Fatal(serveErr)
 	},
 }
 
