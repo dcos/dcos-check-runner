@@ -78,6 +78,7 @@ func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
+
 	writeJSONResponse(w, r, rs)
 }
 
@@ -98,6 +99,7 @@ func (rh *runnerHandler) getCheckFuncFromReq(r *http.Request) (func(context.Cont
 	case "cluster":
 		return rh.runner.Cluster, nil
 	}
+
 	return nil, &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
 }
 
@@ -145,18 +147,22 @@ func checksFromJSONBody(r *http.Request) ([]string, error) {
 	if !ok {
 		return []string{}, nil
 	}
+
 	checksSlice, ok := checksVal.([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("expected checks value of type []string, got %T", checksVal)
 	}
+
 	checks := make([]string, len(checksSlice))
 	for i, check := range checksSlice {
 		check, ok := check.(string)
 		if !ok {
 			return nil, fmt.Errorf("expected check type string, got %T", check)
 		}
+
 		checks[i] = check
 	}
+
 	return checks, nil
 }
 
@@ -171,6 +177,7 @@ func checksFromFormBody(r *http.Request) ([]string, error) {
 	if !ok || checks == nil {
 		return []string{}, nil
 	}
+
 	return checks, nil
 }
 
@@ -180,6 +187,7 @@ func checksFromQueryParams(r *http.Request) []string {
 	if !ok || checks == nil {
 		return []string{}
 	}
+
 	return checks
 }
 
