@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -16,10 +17,9 @@ type Project struct {
 }
 
 // NewProject returns Project with specified project name.
-// If projectName is blank string, it returns nil.
 func NewProject(projectName string) *Project {
 	if projectName == "" {
-		return nil
+		er("can't create project with blank name")
 	}
 
 	p := new(Project)
@@ -37,7 +37,7 @@ func NewProject(projectName string) *Project {
 		}
 		for _, srcPath := range srcPaths {
 			goPath := filepath.Dir(srcPath)
-			if filepath.HasPrefix(wd, goPath) {
+			if filepathHasPrefix(wd, goPath) {
 				p.absPath = filepath.Join(srcPath, projectName)
 				break
 			}
@@ -53,8 +53,6 @@ func NewProject(projectName string) *Project {
 }
 
 // findPackage returns full path to existing go package in GOPATHs.
-// findPackage returns "", if it can't find path.
-// If packageName is "", findPackage returns "".
 func findPackage(packageName string) string {
 	if packageName == "" {
 		return ""
@@ -72,16 +70,29 @@ func findPackage(packageName string) string {
 
 // NewProjectFromPath returns Project with specified absolute path to
 // package.
-// If absPath is blank string or if absPath is not actually absolute,
-// it returns nil.
 func NewProjectFromPath(absPath string) *Project {
-	if absPath == "" || !filepath.IsAbs(absPath) {
-		return nil
+	if absPath == "" {
+		er("can't create project: absPath can't be blank")
+	}
+	if !filepath.IsAbs(absPath) {
+		er("can't create project: absPath is not absolute")
+	}
+
+	// If absPath is symlink, use its destination.
+	fi, err := os.Lstat(absPath)
+	if err != nil {
+		er("can't read path info: " + err.Error())
+	}
+	if fi.Mode()&os.ModeSymlink != 0 {
+		path, err := os.Readlink(absPath)
+		if err != nil {
+			er("can't read the destination of symlink: " + err.Error())
+		}
+		absPath = path
 	}
 
 	p := new(Project)
-	p.absPath = absPath
-	p.absPath = strings.TrimSuffix(p.absPath, findCmdDir(p.absPath))
+	p.absPath = strings.TrimSuffix(absPath, findCmdDir(absPath))
 	p.name = filepath.ToSlash(trimSrcPath(p.absPath, p.SrcPath()))
 	return p
 }
@@ -90,7 +101,7 @@ func NewProjectFromPath(absPath string) *Project {
 func trimSrcPath(absPath, srcPath string) string {
 	relPath, err := filepath.Rel(srcPath, absPath)
 	if err != nil {
-		er("Cobra supports project only within $GOPATH")
+		er(err)
 	}
 	return relPath
 }
@@ -100,7 +111,6 @@ func (p *Project) License() License {
 	if p.license.Text == "" && p.license.Name != "None" {
 		p.license = getLicense()
 	}
-
 	return p.license
 }
 
@@ -110,8 +120,6 @@ func (p Project) Name() string {
 }
 
 // CmdPath returns absolute path to directory, where all commands are located.
-//
-// CmdPath returns blank string, only if p.AbsPath() is a blank string.
 func (p *Project) CmdPath() string {
 	if p.absPath == "" {
 		return ""
@@ -124,8 +132,6 @@ func (p *Project) CmdPath() string {
 
 // findCmdDir checks if base of absPath is cmd dir and returns it or
 // looks for existing cmd dir in absPath.
-// If the cmd dir doesn't exist, empty, or cannot be found,
-// it returns "cmd".
 func findCmdDir(absPath string) string {
 	if !exists(absPath) || isEmpty(absPath) {
 		return "cmd"
@@ -148,7 +154,7 @@ func findCmdDir(absPath string) string {
 // isCmdDir checks if base of name is one of cmdDir.
 func isCmdDir(name string) bool {
 	name = filepath.Base(name)
-	for _, cmdDir := range cmdDirs {
+	for _, cmdDir := range []string{"cmd", "cmds", "command", "commands"} {
 		if name == cmdDir {
 			return true
 		}
@@ -172,11 +178,23 @@ func (p *Project) SrcPath() string {
 	}
 
 	for _, srcPath := range srcPaths {
-		if strings.HasPrefix(p.absPath, srcPath) {
+		if filepathHasPrefix(p.absPath, srcPath) {
 			p.srcPath = srcPath
 			break
 		}
 	}
 
 	return p.srcPath
+}
+
+func filepathHasPrefix(path string, prefix string) bool {
+	if len(path) <= len(prefix) {
+		return false
+	}
+	if runtime.GOOS == "windows" {
+		// Paths in windows are case-insensitive.
+		return strings.EqualFold(path[0:len(prefix)], prefix)
+	}
+	return path[0:len(prefix)] == prefix
+
 }

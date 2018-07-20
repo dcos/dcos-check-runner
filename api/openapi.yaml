@@ -1,0 +1,150 @@
+openapi: "3.0.1"
+
+info:
+  title: "Checks API"
+  version: "0.1.0"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+
+paths:
+
+  /node/:
+
+    get:
+      summary: "Returns node check definitions"
+      parameters:
+        - $ref: "#/components/parameters/CheckQueryParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/CheckListingResponse"
+
+    post:
+      summary: "Runs node checks and returns their statuses"
+      requestBody:
+        $ref: "#/components/requestBodies/CheckRequestBody"
+      responses:
+        "200":
+          $ref: "#/components/responses/CheckStatusResponse"
+
+  /cluster/:
+
+    get:
+      summary: "Returns cluster check definitions"
+      parameters:
+        - $ref: "#/components/parameters/CheckQueryParam"
+      responses:
+        "200":
+           $ref: "#/components/responses/CheckListingResponse"
+
+    post:
+      summary: "Runs cluster checks and returns their statuses"
+      requestBody:
+        $ref: "#/components/requestBodies/CheckRequestBody"
+      responses:
+        "200":
+          $ref: "#/components/responses/CheckStatusResponse"
+
+components:
+
+  schemas:
+
+    CheckDefinition:
+      type: object
+      required:
+        - name
+        - description
+        - cmd
+      properties:
+        name:
+          $ref: "#/components/schemas/CheckName"
+        description:
+          type: string
+        cmd:
+          type: array
+          items:
+            type: string
+
+    CheckStatus:
+      type: object
+      required:
+        - name
+        - description
+        - status
+      properties:
+        name:
+          $ref: "#/components/schemas/CheckName"
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/CheckStatusCode"
+
+    CheckRequest:
+      type: object
+      required:
+        - check
+      properties:
+        check:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckName"
+
+    CheckName:
+      description: "Name of a check"
+      type: string
+
+    CheckStatusCode:
+      description: "Check status code"
+      type: integer
+      minimum: 0
+      maximum: 3
+
+  responses:
+
+    CheckListingResponse:
+      description: "An object mapping check names to their definitions"
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties:
+              $ref: "#/components/schemas/CheckDefinition"
+
+    CheckStatusResponse:
+      description: "An object containing an overall check status, and mapping check names to their status"
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                $ref: "#/components/schemas/CheckStatusCode"
+            additionalProperties:
+              $ref: "#/components/schemas/CheckStatus"
+
+  parameters:
+
+    CheckQueryParam:
+      name: check
+      in: query
+      description: "Names of checks to list"
+      required: false
+      schema:
+        type: array
+        items:
+          $ref: "#/components/schemas/CheckName"
+
+  requestBodies:
+
+    CheckRequestBody:
+      description: "Names of checks to be run"
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CheckRequest"
+        application/x-www-form-urlencoded:
+          schema:
+            $ref: "#/components/schemas/CheckRequest"
