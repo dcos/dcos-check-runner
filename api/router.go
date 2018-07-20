@@ -24,12 +24,12 @@ func NewRouter(runner *runner.Runner, baseURI string) *mux.Router {
 	return router
 }
 
-var middlewares = [...]func(http.Handler) http.Handler{
-	logRequestResponseMiddleware,
-	loggerMiddleware,
-}
-
 func withMiddlewares(h http.Handler) http.Handler {
+	middlewares := [...]func(http.Handler) http.Handler{
+		logRequestResponseMiddleware,
+		loggerMiddleware,
+	}
+
 	for _, m := range middlewares {
 		h = m(h)
 	}
