@@ -41,7 +41,7 @@ type runnerHandler struct {
 }
 
 func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
-	checkFunc, httpErr := rh.checkFuncFromReq(r)
+	checkFunc, httpErr := rh.getCheckFuncFromReq(r)
 	if httpErr != nil {
 		http.Error(w, httpErr.Error(), httpErr.statusCode)
 		return
@@ -54,11 +54,12 @@ func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
+
 	writeJSONResponse(w, r, rs)
 }
 
 func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
-	checkFunc, httpErr := rh.checkFuncFromReq(r)
+	checkFunc, httpErr := rh.getCheckFuncFromReq(r)
 	if httpErr != nil {
 		http.Error(w, httpErr.Error(), httpErr.statusCode)
 		return
@@ -80,11 +81,11 @@ func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, r, rs)
 }
 
-// checkFuncFromReq returns the check function appropriate for r.
+// getCheckFuncFromReq returns the check function appropriate for r.
 // The check function is determined from the check_type variable in the URI. If check_type is not "node" or "cluster",
 // an httpError is returned with http.StatusNotFound. If check_type is not provided, an httpError is returned with
 // http.StatusInternalServerError.
-func (rh *runnerHandler) checkFuncFromReq(r *http.Request) (func(context.Context, bool, ...string) (*runner.CombinedResponse, error), *httpError) {
+func (rh *runnerHandler) getCheckFuncFromReq(r *http.Request) (func(context.Context, bool, ...string) (*runner.CombinedResponse, error), *httpError) {
 	checkType, ok := mux.Vars(r)["check_type"]
 	if !ok {
 		reqLogger(r).Error("check_type not provided in URI")
