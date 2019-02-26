@@ -308,6 +308,72 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestSelectedChecks(t *testing.T) {
+	r, err := NewRunner("master")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := `
+{
+  "cluster_checks": {
+    "cluster_check_1": {
+      "description": "Cluster check 1",
+      "cmd": ["echo", "cluster_check_1"],
+      "timeout": "1s"
+    }
+  },
+  "node_checks": {
+    "checks": {
+      "node_check_1": {
+        "description": "Node check 1",
+        "cmd": ["echo", "node_check_1"],
+        "timeout": "1s"
+      },
+      "node_check_2": {
+        "description": "Node check 2",
+        "cmd": ["echo", "node_check_2"],
+        "timeout": "1s",
+        "roles": ["master"]
+      },
+      "node_check_3": {
+        "description": "Node check 3",
+        "cmd": ["echo", "node_check_3"],
+        "timeout": "1s",
+        "roles": ["agent"]
+      },
+      "node_check_4": {
+        "description": "Node check 4",
+        "cmd": ["echo", "node_check_4"],
+        "timeout": "1s",
+        "roles": ["master"]
+      }
+    },
+    "prestart": ["node_check_1"],
+    "poststart": ["node_check_2", "node_check_3", "node_check_4"]
+  }
+}`
+	err = r.Load(strings.NewReader(cfg))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check that selecting a check results in only getting that check back
+	requested := []string{"node_check_4"}
+	out, err := r.PostStart(context.TODO(), true, requested...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateCheckListing(out, "node_check_4", "Node check 4", "1s", []string{"echo", "node_check_4"}); err != nil {
+		t.Fatal(err)
+	}
+
+	unexpectedCheckName := "node_check_2"
+	if _, ok := out.checks[unexpectedCheckName]; ok {
+		t.Fatalf("found unexpected check %s", unexpectedCheckName)
+	}
+}
+
 func validateCheckListing(cr *CombinedResponse, name, description, timeout string, cmd []string) error {
 	check, ok := cr.checks[name]
 	if !ok {

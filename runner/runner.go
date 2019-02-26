@@ -231,30 +231,17 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		return combinedResponse, nil
 	}
 
-	// cuurentCheckList is the list of checks that will be executed or listed.
-	currentCheckList := checkList
-
-	// if a caller passed selectiveChecks, we should make sure those checks are in currentCheckList
-	// and use only those.
+	checksToRun := checkList
+	// if specific checks are requested, use only those.
 	if len(selectiveChecks) > 0 {
-		currentCheckList = []string{}
-		for _, selectiveCheck := range selectiveChecks {
-			for _, checkItem := range checkList {
-				if selectiveCheck == checkItem {
-					currentCheckList = append(currentCheckList, selectiveCheck)
-					break
-				}
-			}
-		}
+		checksToRun = selectiveChecks
 	}
+	checksToRun = dedupeStrings(checksToRun)
 
-	// Remove duplicate items from currentCheckList.
-	currentCheckList = dedupeStrings(currentCheckList)
-
-	results := make(chan *responseCheck, len(currentCheckList))
+	results := make(chan *responseCheck, len(checksToRun))
 
 	// main loop to get the checks info.
-	for _, name := range currentCheckList {
+	for _, name := range dedupeStrings(checksToRun) {
 
 		go func(name string) {
 			currentCheck, ok := checkMap[name]
@@ -300,7 +287,7 @@ func (r *Runner) run(ctx context.Context, checkMap map[string]*Check, list bool,
 		}(name)
 	}
 
-	for range currentCheckList {
+	for range checksToRun {
 		select {
 		case result := <-results:
 			if result == nil {
