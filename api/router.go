@@ -41,7 +41,13 @@ type runnerHandler struct {
 }
 
 func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
-	checkFunc, httpErr := rh.getCheckFuncFromReq(r)
+	checkType, httpErr := rh.verifyCheckType(r)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.statusCode)
+		return
+	}
+
+	checkFunc, httpErr := rh.getCheckFuncFromReq(checkType)
 	if httpErr != nil {
 		http.Error(w, httpErr.Error(), httpErr.statusCode)
 		return
@@ -59,7 +65,13 @@ func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
-	checkFunc, httpErr := rh.getCheckFuncFromReq(r)
+	checkType, httpErr := rh.verifyCheckType(r)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.statusCode)
+		return
+	}
+
+	checkFunc, httpErr := rh.getCheckFuncFromReq(checkType)
 	if httpErr != nil {
 		http.Error(w, httpErr.Error(), httpErr.statusCode)
 		return
@@ -82,6 +94,7 @@ func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, r, rs)
 }
 
+/*
 // getCheckFuncFromReq returns the check function appropriate for r.
 // The check function is determined from the check_type variable in the URI. If check_type is not "node" or "cluster",
 // an httpError is returned with http.StatusNotFound. If check_type is not provided, an httpError is returned with
@@ -100,6 +113,34 @@ func (rh *runnerHandler) getCheckFuncFromReq(r *http.Request) (func(context.Cont
 		return rh.runner.Cluster, nil
 	}
 
+	return nil, &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
+}
+*/
+
+func (rh *runnerHandler) verifyCheckType(r *http.Request) (string, *httpError) {
+	checkType, ok := mux.Vars(r)["check_type"]
+	if !ok {
+		reqLogger(r).Error("check_type not provided in URI")
+		return "", &httpError{http.StatusInternalServerError, ""}
+	}
+
+	switch checkType {
+	case "node":
+		return checkType, nil
+	case "cluster":
+		return checkType, nil
+	default:
+		return "", &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
+	}
+}
+
+func (rh *runnerHandler) getCheckFuncFromReq(checkType string) (func(context.Context, bool, ...string) (*runner.CombinedResponse, error), *httpError) {
+	switch checkType {
+	case "node":
+		return rh.runner.PostStart, nil
+	case "cluster":
+		return rh.runner.Cluster, nil
+	}
 	return nil, &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
 }
 
