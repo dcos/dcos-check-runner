@@ -53,7 +53,15 @@ func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rs, err := checkFunc(r.Context(), true, checksFromQueryParams(r)...)
+	checks := checksFromQueryParams(r)
+
+	httpErr = rh.verifySelectedChecks(checkType, checks)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.statusCode)
+		return
+	}
+
+	rs, err := checkFunc(r.Context(), true, checks...)
 	if err != nil {
 		errMsg := "Error listing checks"
 		reqLogger(r).Error(errors.Wrap(err, errMsg))
@@ -78,6 +86,12 @@ func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	checks, httpErr := checksFromBody(r)
+	if httpErr != nil {
+		http.Error(w, httpErr.Error(), httpErr.statusCode)
+		return
+	}
+
+	httpErr = rh.verifySelectedChecks(checkType, checks)
 	if httpErr != nil {
 		http.Error(w, httpErr.Error(), httpErr.statusCode)
 		return
@@ -125,6 +139,30 @@ func (rh *runnerHandler) getCheckFuncFromReq(checkType string) (func(context.Con
 		return rh.runner.Cluster, nil
 	}
 	return nil, &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
+}
+
+func (rh *runnerHandler) verifySelectedChecks(checkType string, selectedChecks []string) *httpError {
+	var checksMap map[string]*runner.Check
+	switch checkType {
+	case "node":
+		checksMap = rh.runner.NodeChecks.Checks
+	case "cluster":
+		checksMap = rh.runner.ClusterChecks
+	default:
+		return &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
+	}
+
+	missingChecks := []string{}
+	for _, c := range selectedChecks {
+		if _, ok := checksMap[c]; !ok {
+			missingChecks = append(missingChecks, c)
+		}
+	}
+
+	if len(missingChecks) > 0 {
+		return &httpError{http.StatusNotFound, fmt.Sprintf("missing checks: %s", missingChecks)}
+	}
+	return nil
 }
 
 func verifyCheckType(r *http.Request) (string, *httpError) {
