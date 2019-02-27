@@ -41,7 +41,7 @@ type runnerHandler struct {
 }
 
 func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
-	checkType, httpErr := rh.verifyCheckType(r)
+	checkType, httpErr := verifyCheckType(r)
 	if httpErr != nil {
 		http.Error(w, httpErr.Error(), httpErr.statusCode)
 		return
@@ -65,7 +65,7 @@ func (rh *runnerHandler) listChecks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rh *runnerHandler) runChecks(w http.ResponseWriter, r *http.Request) {
-	checkType, httpErr := rh.verifyCheckType(r)
+	checkType, httpErr := verifyCheckType(r)
 	if httpErr != nil {
 		http.Error(w, httpErr.Error(), httpErr.statusCode)
 		return
@@ -117,7 +117,17 @@ func (rh *runnerHandler) getCheckFuncFromReq(r *http.Request) (func(context.Cont
 }
 */
 
-func (rh *runnerHandler) verifyCheckType(r *http.Request) (string, *httpError) {
+func (rh *runnerHandler) getCheckFuncFromReq(checkType string) (func(context.Context, bool, ...string) (*runner.CombinedResponse, error), *httpError) {
+	switch checkType {
+	case "node":
+		return rh.runner.PostStart, nil
+	case "cluster":
+		return rh.runner.Cluster, nil
+	}
+	return nil, &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
+}
+
+func verifyCheckType(r *http.Request) (string, *httpError) {
 	checkType, ok := mux.Vars(r)["check_type"]
 	if !ok {
 		reqLogger(r).Error("check_type not provided in URI")
@@ -132,16 +142,6 @@ func (rh *runnerHandler) verifyCheckType(r *http.Request) (string, *httpError) {
 	default:
 		return "", &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
 	}
-}
-
-func (rh *runnerHandler) getCheckFuncFromReq(checkType string) (func(context.Context, bool, ...string) (*runner.CombinedResponse, error), *httpError) {
-	switch checkType {
-	case "node":
-		return rh.runner.PostStart, nil
-	case "cluster":
-		return rh.runner.Cluster, nil
-	}
-	return nil, &httpError{http.StatusNotFound, fmt.Sprintf("unrecognized check type: %s", checkType)}
 }
 
 // checksFromBody returns a slice of the check names from r's body.
