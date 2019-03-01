@@ -18,6 +18,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/CheckListingResponse"
+        "404":
+          $ref: "#/components/responses/CheckMissingError"
 
     post:
       summary: "Runs node checks and returns their statuses"
@@ -26,6 +28,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/CheckStatusResponse"
+        "404":
+          $ref: "#/components/responses/CheckMissingError"
 
   /cluster/:
 
@@ -36,6 +40,8 @@ paths:
       responses:
         "200":
            $ref: "#/components/responses/CheckListingResponse"
+        "404":
+          $ref: "#/components/responses/CheckMissingError"
 
     post:
       summary: "Runs cluster checks and returns their statuses"
@@ -44,6 +50,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/CheckStatusResponse"
+        "404":
+          $ref: "#/components/responses/CheckMissingError"
 
 components:
 
@@ -124,6 +132,13 @@ components:
             additionalProperties:
               $ref: "#/components/schemas/CheckStatus"
 
+    CheckMissingError:
+      description: "Error indicating that one or more requested checks were not found"
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: "missing checks: [foo]"
   parameters:
 
     CheckQueryParam:

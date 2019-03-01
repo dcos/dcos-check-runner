@@ -515,6 +515,18 @@ func TestAPIErrors(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("nonexistant check", func(t *testing.T) {
+		if sc := getResponse(t, "GET", s.URL+"/node?check=foo", nil, nil).StatusCode; sc != http.StatusNotFound {
+			t.Fatalf("Expected status %d, got %d", http.StatusNotFound, sc)
+		}
+	})
+
+	t.Run("existing and nonexistant check", func(t *testing.T) {
+		if sc := getResponse(t, "GET", s.URL+"/node?check=node-check-master&check=foo", nil, nil).StatusCode; sc != http.StatusNotFound {
+			t.Fatalf("Expected status %d, got %d", http.StatusNotFound, sc)
+		}
+	})
 }
 
 // interfaceSlice returns a []interface{} initialized from strings.
