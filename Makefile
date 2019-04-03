@@ -1,9 +1,8 @@
 DEFAULT_TARGET: build
 CURRENT_DIR=$(shell pwd)
 BUILD_DIR=build
-PKG_DIR=/go/src/github.com/dcos
 BINARY_NAME=dcos-check-runner
-PKG_NAME=$(PKG_DIR)/$(BINARY_NAME)
+PKG_NAME=$(BINARY_NAME)
 IMAGE_NAME=dcos-check-runner-dev
 
 all: test install
@@ -16,18 +15,18 @@ docker:
 build: docker
 	mkdir -p $(BUILD_DIR)
 	docker run \
-		-v $(CURRENT_DIR):$(PKG_DIR)/$(BINARY_NAME) \
-		-w $(PKG_DIR)/$(BINARY_NAME) \
+		-v $(CURRENT_DIR):/$(BINARY_NAME) \
+		-w /$(BINARY_NAME) \
 		--privileged \
 		--rm \
 		$(IMAGE_NAME) \
-		go build -v -ldflags '$(LDFLAGS)' -o $(BUILD_DIR)/$(BINARY_NAME)
+		go build -mod=vendor -v -ldflags '$(LDFLAGS)' -o $(BUILD_DIR)/$(BINARY_NAME)
 
 .PHONY: test
 test: docker
 	docker run \
-		-v $(CURRENT_DIR):$(PKG_DIR)/$(BINARY_NAME) \
-		-w $(PKG_DIR)/$(BINARY_NAME) \
+		-v $(CURRENT_DIR):/$(BINARY_NAME) \
+		-w /$(BINARY_NAME) \
 		--privileged \
 		--rm \
 		$(IMAGE_NAME) \
@@ -36,8 +35,8 @@ test: docker
 .PHONY: shell
 shell:
 	docker run \
-		-v $(CURRENT_DIR):$(PKG_DIR)/$(BINARY_NAME) \
-		-w $(PKG_DIR)/$(BINARY_NAME) \
+		-v $(CURRENT_DIR):/$(BINARY_NAME) \
+		-w /$(BINARY_NAME) \
 		--privileged \
 		--rm \
 		-it \
