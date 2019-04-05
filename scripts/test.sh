@@ -32,20 +32,17 @@ function _gofmt {
 
 function _misspell {
     logmsg "Running 'misspell' ..."
-    go get -u github.com/client9/misspell/cmd/misspell
     misspell -error $(ls | grep -v vendor)
 }
 
 function _goimports {
     logmsg "Running 'goimports' ..."
-    go get -u golang.org/x/tools/cmd/goimports
     test -z "$(gofmt -l -d ${SUBDIRS} | tee /dev/stderr)"
 }
 
 
 function _golint {
     logmsg "Running 'go lint' ..."
-    go get -u github.com/golang/lint/golint
     for pkg in $PACKAGES; do
         golint -set_exit_status $pkg
     done
