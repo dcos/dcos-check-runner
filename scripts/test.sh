@@ -15,7 +15,7 @@ set -e
 set -o pipefail
 export PATH="${GOPATH}/bin:${PATH}"
 
-PACKAGES="$(go list ./... | grep -v /vendor/)"
+PACKAGES="$(go list -mod=vendor ./... )"
 SUBDIRS="api cmd config runner"
 SOURCE_DIR=$(git rev-parse --show-toplevel)
 BUILD_DIR="${SOURCE_DIR}/build"
@@ -51,12 +51,12 @@ function _golint {
 
 function _govet {
     logmsg "Running 'go vet' ..."
-    go vet ${PACKAGES}
+    go vet -mod=vendor ${PACKAGES}
 }
 
 
 function _unittest_with_coverage {
-	go test -cover -race -test.v ${PACKAGES}
+	go test -mod=vendor -cover -race -test.v ${PACKAGES}
 }
 
 
