@@ -2,7 +2,6 @@ DEFAULT_TARGET: build
 CURRENT_DIR=$(shell pwd)
 BUILD_DIR=build
 BINARY_NAME=dcos-check-runner
-PKG_NAME=$(BINARY_NAME)
 IMAGE_NAME=dcos-check-runner-dev
 
 all: test install
