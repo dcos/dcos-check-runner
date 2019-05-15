@@ -1,52 +1,62 @@
 DEFAULT_TARGET: build
+
+VERSION := 0.1.0
+COMMIT := $(shell git rev-parse --short HEAD)
+LDFLAGS := -X github.com/dcos/dcos-check-runner/config.Version=$(VERSION) -X github.com/dcos/dcos-check-runner/config.Commit=$(COMMIT)
+
 CURRENT_DIR=$(shell pwd)
 BUILD_DIR=build
+PKG_DIR=/dcos-check-runner
 BINARY_NAME=dcos-check-runner
 IMAGE_NAME=dcos-check-runner-dev
-
-all: test install
+SRCS := $(shell find . -type f -name '*.go' -not -path './vendor/*')
 
 .PHONY: docker
 docker:
+ifndef NO_DOCKER
 	docker build -t $(IMAGE_NAME) .
+endif
+
+$(BUILD_DIR)/$(BINARY_NAME): $(SRCS)
+	mkdir -p $(BUILD_DIR)
+	$(call inDocker,go build -mod=vendor -v -ldflags '$(LDFLAGS)' -o $(BUILD_DIR)/$(BINARY_NAME))
 
 .PHONY: build
-build: docker
-	mkdir -p $(BUILD_DIR)
-	docker run \
-		-v $(CURRENT_DIR):/$(BINARY_NAME) \
-		-w /$(BINARY_NAME) \
-		--privileged \
-		--rm \
-		$(IMAGE_NAME) \
-		go build -mod=vendor -v -ldflags '$(LDFLAGS)' -o $(BUILD_DIR)/$(BINARY_NAME)
+build: docker $(BUILD_DIR)/$(BINARY_NAME)
+
+# install does not run in a docker container to build for the correct OS
+.PHONY: install
+install:
+	go install -mod=vendor -v -ldflags '$(LDFLAGS)'
 
 .PHONY: test
 test: docker
-	docker run \
-		-v $(CURRENT_DIR):/$(BINARY_NAME) \
-		-w /$(BINARY_NAME) \
-		--privileged \
-		--rm \
-		$(IMAGE_NAME) \
-		bash -x -c './scripts/test.sh'
+	$(call inDocker,bash -x -c './scripts/test.sh')
 
-.PHONY: shell
-shell:
-	docker run \
-		-v $(CURRENT_DIR):/$(BINARY_NAME) \
-		-w /$(BINARY_NAME) \
-		--privileged \
-		--rm \
-		-it \
-		$(IMAGE_NAME) \
-		/bin/bash
+.PHONY: integration
+integration:
+	@echo "This project doesn't have any integration tests"
 
-# install does not run in a docker container because it only compiles on linux.
-.PHONY: install
-install:
-	go install -v -ldflags '$(LDFLAGS)'
+.PHONY: publish
+publish:
+	@echo "This project doesn't have any artifacts to be published"
 
 .PHONY: clean
 clean:
 	rm -rf ./$(BUILD_DIR)
+
+ifdef NO_DOCKER
+  define inDocker
+    $1
+  endef
+else
+  define inDocker
+    docker run \
+      $(shell test -t 0 && echo "-t -i" || true) \
+      -v $(CURRENT_DIR):$(PKG_DIR) \
+      -w $(PKG_DIR) \
+      --rm \
+      $(IMAGE_NAME) \
+      $1
+  endef
+endif
