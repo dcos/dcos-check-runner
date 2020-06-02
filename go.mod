@@ -7,7 +7,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20180705093442-88bfeed483d3
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dcos/dcos-go v0.0.0-20180528140539-401ceabc5679
-	github.com/felixge/httpsnoop v1.0.0
+	github.com/felixge/httpsnoop v1.0.1
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v0.0.0-20180605211556-cb4698366aa6
 	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce // indirect
